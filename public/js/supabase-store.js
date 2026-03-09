@@ -1,14 +1,10 @@
 (() => {
   "use strict";
 
-  // Replace these with your Supabase project values
   const SUPABASE_URL = "https://xhnhlvqkzemlzxceawxk.supabase.co";
   const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_5x7o2_eg_wwn9qZcVkcAog_LLxqRzDZ";
 
-  const supabase = window.supabase.createClient(
-    SUPABASE_URL,
-    SUPABASE_PUBLISHABLE_KEY
-  );
+  const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
   let state = {
     counselors: [],
@@ -20,7 +16,11 @@
 
   function notify() {
     for (const fn of listeners) {
-      try { fn(state); } catch (err) { console.error(err); }
+      try {
+        fn(state);
+      } catch (err) {
+        console.error(err);
+      }
     }
   }
 
@@ -56,7 +56,9 @@
     t.appendChild(body);
     wrap.appendChild(t);
 
-    setTimeout(() => { if (t.isConnected) t.remove(); }, 5000);
+    setTimeout(() => {
+      if (t.isConnected) t.remove();
+    }, 5000);
   }
 
   async function loadState() {
@@ -66,7 +68,11 @@
       { data: assignments, error: aErr }
     ] = await Promise.all([
       supabase.from("counselors").select("*").order("created_at", { ascending: true }),
-      supabase.from("students").select("*").order("created_at", { ascending: true }),
+      supabase
+        .from("students")
+        .select("*")
+        .not("status", "in", '("completed","cancelled")')
+        .order("created_at", { ascending: true }),
       supabase.from("assignments").select("*").order("started_at", { ascending: false })
     ]);
 
@@ -96,13 +102,13 @@
   }
 
   async function upsertCounselor({ name, levels }) {
-    const { data: existing, error: fetchError } = await supabase
+    const { data: existing, error: lookupError } = await supabase
       .from("counselors")
       .select("*")
       .eq("name", name)
       .maybeSingle();
 
-    if (fetchError) throw fetchError;
+    if (lookupError) throw lookupError;
 
     if (existing) {
       return existing;
@@ -134,40 +140,37 @@
   }
 
   async function endAssignment(assignmentId) {
-    const { data: assignment, error: fetchErr } = await supabase
-      .from("assignments")
-      .select("*")
-      .eq("id", assignmentId)
-      .single();
+    const { data, error } = await supabase.rpc("complete_assignment", {
+      p_assignment_id: assignmentId
+    });
 
-    if (fetchErr) throw fetchErr;
-
-    const { error: aErr } = await supabase
-      .from("assignments")
-      .update({ ended_at: new Date().toISOString() })
-      .eq("id", assignmentId);
-
-    if (aErr) throw aErr;
-
-    const { error: cErr } = await supabase
-      .from("counselors")
-      .update({ active_assignment_id: null })
-      .eq("id", assignment.counselor_id);
-
-    if (cErr) throw cErr;
-
+    if (error) throw error;
     await loadState();
+    return data;
   }
 
-  async function subscribeRealtime() {
-    const channel = supabase
-      .channel("queue-updates")
-      .on("postgres_changes", { event: "*", schema: "public", table: "students" }, loadState)
-      .on("postgres_changes", { event: "*", schema: "public", table: "counselors" }, loadState)
-      .on("postgres_changes", { event: "*", schema: "public", table: "assignments" }, loadState)
-      .subscribe();
+  async function cancelStudent(studentId) {
+    const { data, error } = await supabase.rpc("cancel_student", {
+      p_student_id: studentId
+    });
 
-    return channel;
+    if (error) throw error;
+    await loadState();
+    return data;
+  }
+
+  async function reconcileSystem() {
+    const { data, error } = await supabase.rpc("reconcile_system");
+    if (error) throw error;
+    await loadState();
+    return data;
+  }
+
+  async function matchQueue() {
+    const { data, error } = await supabase.rpc("match_queue");
+    if (error) throw error;
+    await loadState();
+    return Number(data ?? 0);
   }
 
   function onStateChanged(fn) {
@@ -176,16 +179,28 @@
     return () => listeners.delete(fn);
   }
 
+  async function subscribeRealtime() {
+    return supabase
+      .channel("queue-updates")
+      .on("postgres_changes", { event: "*", schema: "public", table: "students" }, loadState)
+      .on("postgres_changes", { event: "*", schema: "public", table: "counselors" }, loadState)
+      .on("postgres_changes", { event: "*", schema: "public", table: "assignments" }, loadState)
+      .subscribe();
+  }
+
   window.SupaStore = {
     supabase,
     getState: () => state,
-    onStateChanged,
     loadState,
     addStudent,
     upsertCounselor,
     setCounselorAvailability,
     endAssignment,
+    cancelStudent,
+    reconcileSystem,
+    matchQueue,
     subscribeRealtime,
+    onStateChanged,
     toast
   };
 })();

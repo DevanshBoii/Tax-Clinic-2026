@@ -37,6 +37,7 @@
 
     const assignmentsList = el("assignmentsList");
     assignmentsList.innerHTML = "";
+
     if (!active.length) {
       assignmentsList.appendChild(empty("No active assignments."));
     } else {
@@ -77,6 +78,7 @@
 
     const waitingList = el("waitingList");
     waitingList.innerHTML = "";
+
     const sortedWaiting = window.Matching.waitingStudentsSorted(state);
 
     if (!sortedWaiting.length) {
@@ -116,13 +118,11 @@
 
     const counselorList = el("counselorList");
     counselorList.innerHTML = "";
+
     if (!state.counselors.length) {
       counselorList.appendChild(empty("No counselors yet."));
     } else {
       state.counselors.forEach((c) => {
-        const busy = c.active_assignment_id !== null;
-        const avail = c.is_available === true;
-
         const card = document.createElement("div");
         card.className = "card";
 
@@ -137,10 +137,10 @@
         nm.textContent = c.name;
 
         const pill = document.createElement("span");
-        if (busy) {
+        if (c.active_assignment_id) {
           pill.className = "pill bad";
           pill.textContent = "BUSY";
-        } else if (avail) {
+        } else if (c.is_available) {
           pill.className = "pill good";
           pill.textContent = "AVAILABLE";
         } else {
@@ -153,7 +153,7 @@
 
         const sm = document.createElement("div");
         sm.className = "small";
-        sm.textContent = `Levels: ${c.levels.join(", ")}`;
+        sm.textContent = `Levels: ${Array.isArray(c.levels) ? c.levels.join(", ") : ""}`;
 
         meta.appendChild(title);
         meta.appendChild(sm);
@@ -204,14 +204,12 @@
   window.SupaStore.onStateChanged(render);
 
   async function boot() {
+    await window.SupaStore.reconcileSystem();
     await window.SupaStore.loadState();
     await window.SupaStore.subscribeRealtime();
 
-    // refresh every few seconds
     setInterval(async () => {
       try {
-        await window.SupaStore.loadState();
-        await window.Matching.tryMatchAll();
         await window.SupaStore.loadState();
       } catch (err) {
         console.error("Auto-refresh failed", err);

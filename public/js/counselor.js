@@ -267,6 +267,7 @@
   });
 
   async function boot() {
+    await window.SupaStore.reconcileSystem();
     await refreshState();
     await window.SupaStore.subscribeRealtime();
 
