@@ -227,6 +227,12 @@
     }
 
     try {
+      // If counselor is currently busy, end the assignment first
+      if (me.active_assignment_id) {
+        await window.SupaStore.endAssignment(me.active_assignment_id);
+        window.SupaStore.toast("good", "Student returned to waiting list", "The student has been moved back to the waiting list.");
+      }
+      
       await window.SupaStore.setCounselorAvailability(me.id, false);
       await refreshState();
     } catch (err) {
