@@ -1,0 +1,19 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Open Intake Page",
+      "type": "msedge",
+      "request": "launch",
+      "url": "C:/Users/DEVANSH/OneDrive - University of Winnipeg/Desktop/counselor-allocator-local/public/intake.html",
+      "webRoot": "${workspaceFolder}"
+    },
+    {
+      "name": "Open Counselor Page",
+      "type": "msedge",
+      "request": "launch",
+      "url": "C:/Users/DEVANSH/OneDrive - University of Winnipeg/Desktop/counselor-allocator-local/public/counselor.html",
+      "webRoot": "${workspaceFolder}"
+    }
+  ]
+}

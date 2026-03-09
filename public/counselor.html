@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Counselor Screen</title>
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+<header>
+  <div class="wrap top">
+    <div>
+      <h1>Counselor Screen</h1>
+      <p class="sub">Log in (demo), toggle Available/Unavailable, see assignments live.</p>
+    </div>
+    <div class="toolbar">
+      <a class="linkBtn" href="intake.html">🧑‍🎓 Intake Screen</a>
+      <span class="pill" id="statsPill">Connecting…</span>
+    </div>
+  </div>
+</header>
+
+<main class="wrap grid2">
+  <section class="panel">
+    <div class="head">
+      <h2>Counselor Login</h2>
+      <span class="pill">Local network</span>
+    </div>
+    <div class="body">
+      <form id="loginForm" autocomplete="off">
+        <div>
+          <label for="loginName">Your counselor name</label>
+          <input id="loginName" required minlength="2" placeholder="e.g., Ms. Patel" />
+        </div>
+
+        <div>
+          <label>Levels you can handle (only for first-time registration)</label>
+          <div class="levels">
+            <label class="chk"><input type="checkbox" value="1" name="cLevels"><span>Single</span></label>
+            <label class="chk"><input type="checkbox" value="2" name="cLevels"><span>Family</span></label>
+            <label class="chk"><input type="checkbox" value="3" name="cLevels"><span>Self-Employed</span></label>
+          </div>
+          <div class="footnote">If your name already exists, it logs you into that counselor profile. Please note, your profile name is case sensitive.</div>
+        </div>
+
+        <div class="actions">
+          <button type="submit">Login</button>
+          <button type="button" class="secondary" id="btnLogout">Logout</button>
+        </div>
+      </form>
+    </div>
+  </section>
+
+  <section class="panel">
+    <div class="head">
+      <h2>🎛️ My Status</h2>
+      <span class="pill" id="mePill">Not logged in</span>
+    </div>
+    <div class="body">
+      <div class="panel inner">
+        <div class="head">
+          <h3>Availability</h3>
+          <span class="pill" id="availPill">—</span>
+        </div>
+        <div class="body">
+          <div class="actions">
+            <button id="btnAvailable">✅ Set Available</button>
+            <button class="secondary" id="btnUnavailable">🚫 Set Unavailable</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="spacer"></div>
+
+      <div class="panel inner">
+        <div class="head">
+          <h3>Current Assignment</h3>
+        </div>
+        <div class="body">
+          <div id="myAssignmentBox" class="empty">No assignment yet.</div>
+          <div class="actions">
+            <button class="danger" id="btnEndSession">✅ End session</button>
+            <button class="secondary" id="btnTryMatch">🔁 Try match</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="spacer"></div>
+
+      <div class="panel inner">
+        <div class="head">
+          <h3>All Counselors (live)</h3>
+          <span class="pill" id="counselorPill">0 counselors</span>
+        </div>
+        <div class="body">
+          <div class="list" id="counselorList"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<div class="toastWrap" id="toastWrap" aria-live="polite"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/supabase-store.js"></script>
+<script src="js/matching.js"></script>
+<script src="js/counselor.js"></script>
+</body>
+</html>

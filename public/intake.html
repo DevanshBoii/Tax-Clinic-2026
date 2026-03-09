@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Student Intake</title>
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+<header>
+  <div class="wrap top">
+    <div>
+      <h1>Tax Clinic 2026 - Sign Up</h1>
+      <p class="sub">Students join the waiting room and are matched automatically.</p>
+    </div>
+    <div class="toolbar">
+      <a class="linkBtn" href="counselor.html">Counselor Screen</a>
+      <span class="pill" id="statsPill">Connecting…</span>
+    </div>
+  </div>
+</header>
+
+<main class="wrap grid2">
+  <section class="panel">
+    <div class="head">
+      <h2>Add Student</h2>
+      <span class="pill warn" id="waitingPill">0 waiting</span>
+    </div>
+    <div class="body">
+      <form id="studentForm" autocomplete="off">
+        <div>
+          <label for="studentName">Student name</label>
+          <input id="studentName" required minlength="2" placeholder="e.g., Jordan Lee" />
+        </div>
+
+        <div>
+          <label for="studentLevel">Required level</label>
+          <select id="studentLevel" required>
+            <option value="" disabled selected>Select a level…</option>
+            <option value="1">Single</option>
+            <option value="2">Family</option>
+            <option value="3">Self-Employed</option>
+          </select>
+        </div>
+
+        <div class="actions">
+          <button type="submit">Add student</button>
+          <button type="button" class="secondary" id="btnTryMatch">Try match</button>
+        </div>
+      </form>
+    </div>
+  </section>
+
+  <section class="panel">
+    <div class="head">
+      <h2>Live Status</h2>
+      <span class="pill" id="livePill">—</span>
+    </div>
+    <div class="body">
+      <div class="panel inner">
+        <div class="head">
+          <h3>Active Assignments</h3>
+          <span class="pill" id="activePill">0 active</span>
+        </div>
+        <div class="body">
+          <div class="list" id="assignmentsList"></div>
+        </div>
+      </div>
+
+      <div class="spacer"></div>
+
+      <div class="panel inner">
+        <div class="head">
+          <h3>Waiting Students</h3>
+          <span class="pill warn" id="waitingPill2">0 waiting</span>
+        </div>
+        <div class="body">
+          <div class="list" id="waitingList"></div>
+        </div>
+      </div>
+
+      <div class="spacer"></div>
+
+      <div class="panel inner">
+        <div class="head">
+          <h3>Counselors</h3>
+          <span class="pill" id="counselorPill">0 counselors</span>
+        </div>
+        <div class="body">
+          <div class="list" id="counselorList"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<div class="toastWrap" id="toastWrap" aria-live="polite"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/supabase-store.js"></script>
+<script src="js/matching.js"></script>
+<script src="js/intake.js"></script>
+</body>
+</html>
