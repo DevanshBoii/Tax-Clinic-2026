@@ -227,9 +227,9 @@
     }
 
     try {
-      // If counselor is currently busy, end the assignment first
+      // If counselor is currently busy, end the assignment and return student to waiting
       if (me.active_assignment_id) {
-        await window.SupaStore.endAssignment(me.active_assignment_id);
+        await window.SupaStore.endAssignmentAndReturnToWaiting(me.active_assignment_id);
         window.SupaStore.toast("good", "Student returned to waiting list", "The student has been moved back to the waiting list.");
       }
       

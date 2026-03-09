@@ -169,6 +169,34 @@ let isLoadingState = false;
     return data;
   }
 
+  async function endAssignmentAndReturnToWaiting(assignmentId) {
+    // Get the assignment to find the student ID
+    const { data: assignment, error: assignErr } = await supabase
+      .from("assignments")
+      .select("student_id")
+      .eq("id", assignmentId)
+      .single();
+
+    if (assignErr) throw assignErr;
+
+    // End the assignment
+    const { error: endErr } = await supabase.rpc("complete_assignment", {
+      p_assignment_id: assignmentId
+    });
+
+    if (endErr) throw endErr;
+
+    // Reset student status back to waiting
+    const { error: updateErr } = await supabase
+      .from("students")
+      .update({ status: "waiting" })
+      .eq("id", assignment.student_id);
+
+    if (updateErr) throw updateErr;
+
+    await loadState();
+  }
+
   async function cancelStudent(studentId) {
     const { data, error } = await supabase.rpc("cancel_student", {
       p_student_id: studentId
@@ -216,6 +244,7 @@ let isLoadingState = false;
     upsertCounselor,
     setCounselorAvailability,
     endAssignment,
+    endAssignmentAndReturnToWaiting,
     cancelStudent,
     reconcileSystem,
     matchQueue,
