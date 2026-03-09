@@ -13,6 +13,8 @@
   };
 
   const listeners = new Set();
+let isLoadingState = false;
+  let pendingLoadState = false;
 
   function notify() {
     for (const fn of listeners) {
@@ -62,32 +64,50 @@
   }
 
   async function loadState() {
-    const [
-      { data: counselors, error: cErr },
-      { data: students, error: sErr },
-      { data: assignments, error: aErr }
-    ] = await Promise.all([
-      supabase.from("counselors").select("*").order("created_at", { ascending: true }),
-      supabase
-        .from("students")
-        .select("*")
-        .not("status", "in", '("completed","cancelled")')
-        .order("created_at", { ascending: true }),
-      supabase.from("assignments").select("*").order("started_at", { ascending: false })
-    ]);
+    if (isLoadingState) {
+      pendingLoadState = true;
+      return state;
+    }
 
-    if (cErr) throw cErr;
-    if (sErr) throw sErr;
-    if (aErr) throw aErr;
+    isLoadingState = true;
+    pendingLoadState = false;
 
-    state = {
-      counselors: counselors ?? [],
-      students: students ?? [],
-      assignments: assignments ?? []
-    };
+    try {
+      const [
+        { data: counselors, error: cErr },
+        { data: students, error: sErr },
+        { data: assignments, error: aErr }
+      ] = await Promise.all([
+        supabase.from("counselors").select("*").order("created_at", { ascending: true }),
+        supabase
+          .from("students")
+          .select("*")
+          .not("status", "in", '("completed","cancelled")')
+          .order("created_at", { ascending: true }),
+        supabase.from("assignments").select("*").order("started_at", { ascending: false })
+      ]);
 
-    notify();
-    return state;
+      if (cErr) throw cErr;
+      if (sErr) throw sErr;
+      if (aErr) throw aErr;
+
+      state = {
+        counselors: counselors ?? [],
+        students: students ?? [],
+        assignments: assignments ?? []
+      };
+
+      notify();
+
+      if (pendingLoadState) {
+        isLoadingState = false;
+        return loadState();
+      }
+
+      return state;
+    } finally {
+      isLoadingState = false;
+    }
   }
 
   async function addStudent({ name, level }) {
@@ -182,9 +202,9 @@
   async function subscribeRealtime() {
     return supabase
       .channel("queue-updates")
-      .on("postgres_changes", { event: "*", schema: "public", table: "students" }, loadState)
-      .on("postgres_changes", { event: "*", schema: "public", table: "counselors" }, loadState)
-      .on("postgres_changes", { event: "*", schema: "public", table: "assignments" }, loadState)
+      .on("postgres_changes", { event: "*", schema: "public", table: "students" }, () => loadState())
+      .on("postgres_changes", { event: "*", schema: "public", table: "counselors" }, () => loadState())
+      .on("postgres_changes", { event: "*", schema: "public", table: "assignments" }, () => loadState())
       .subscribe();
   }
 
