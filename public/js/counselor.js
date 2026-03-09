@@ -16,7 +16,18 @@
     localStorage.removeItem(SESSION_KEY);
   }
 
+  function setText(id, text) {
+    const node = el(id);
+    if (node) node.textContent = text;
+  }
+
+  function setClass(id, className) {
+    const node = el(id);
+    if (node) node.className = className;
+  }
+
   function fmt(ts) {
+    if (!ts) return "—";
     const d = new Date(ts);
     return d.toLocaleString(undefined, {
       hour: "2-digit",
@@ -29,50 +40,25 @@
   function findMe(state) {
     const name = getSessionName();
     if (!name) return null;
-    return state.counselors.find((c) => c.name.toLowerCase() === name.toLowerCase()) ?? null;
+
+    return state.counselors.find(
+      (c) => String(c.name).trim().toLowerCase() === String(name).trim().toLowerCase()
+    ) ?? null;
   }
 
-  function render(state) {
-    const me = findMe(state);
-    const activeCount = state.assignments.filter((a) => a.ended_at === null).length;
-    const waitingCount = state.students.filter((s) => s.status === "waiting").length;
+  function renderCounselorList(state, me) {
+    const list = el("counselorList");
+    if (!list) return;
 
-    el("statsPill").textContent = `Active: ${activeCount} • Waiting: ${waitingCount} • Counselors: ${state.counselors.length}`;
-    el("counselorPill").textContent = `${state.counselors.length} counselors`;
+    list.innerHTML = "";
 
-    if (!me) {
-      el("mePill").textContent = "Not logged in";
-      el("availPill").textContent = "—";
-      el("busyPill").textContent = "—";
-      el("myAssignmentBox").textContent = "Log in to manage your status.";
+    if (!state.counselors.length) {
+      const empty = document.createElement("div");
+      empty.className = "empty";
+      empty.textContent = "No counselors yet.";
+      list.appendChild(empty);
       return;
     }
-
-    el("mePill").textContent = `Logged in: ${me.name}`;
-
-    const busy = me.active_assignment_id !== null;
-    const avail = me.is_available === true;
-
-    el("busyPill").className = busy ? "pill bad" : "pill good";
-    el("busyPill").textContent = busy ? "BUSY" : "NOT BUSY";
-
-    el("availPill").className = avail ? "pill good" : "pill warn";
-    el("availPill").textContent = avail ? "AVAILABLE" : "UNAVAILABLE";
-
-    const box = el("myAssignmentBox");
-    const assignment = state.assignments.find((a) => a.id === me.active_assignment_id && a.ended_at === null);
-    const student = assignment ? state.students.find((s) => s.id === assignment.student_id) : null;
-
-    if (assignment && student) {
-      box.textContent = `Assigned to: ${student.name} • Level ${assignment.level} • Started ${fmt(assignment.started_at)}`;
-    } else if (avail) {
-      box.textContent = "You are available. Waiting for a student match…";
-    } else {
-      box.textContent = "You are unavailable.";
-    }
-
-    const list = el("counselorList");
-    list.innerHTML = "";
 
     state.counselors.forEach((c) => {
       const card = document.createElement("div");
@@ -86,7 +72,7 @@
 
       const nm = document.createElement("div");
       nm.className = "name";
-      nm.textContent = c.name + (me.id === c.id ? " (You)" : "");
+      nm.textContent = c.name + (me && me.id === c.id ? " (You)" : "");
 
       const pill = document.createElement("span");
       if (c.active_assignment_id) {
@@ -105,22 +91,94 @@
 
       const sm = document.createElement("div");
       sm.className = "small";
-      sm.textContent = `Levels: ${c.levels.join(", ")}`;
+      sm.textContent = `Levels: ${Array.isArray(c.levels) ? c.levels.join(", ") : ""}`;
 
       meta.appendChild(title);
       meta.appendChild(sm);
+
       card.appendChild(meta);
       list.appendChild(card);
     });
   }
 
-  el("loginForm").addEventListener("submit", async (e) => {
+  function render(state) {
+    if (!state) return;
+
+    const activeCount = state.assignments.filter((a) => a.ended_at === null).length;
+    const waitingCount = state.students.filter((s) => s.status === "waiting").length;
+    const me = findMe(state);
+
+    setText(
+      "statsPill",
+      `Active: ${activeCount} • Waiting: ${waitingCount} • Counselors: ${state.counselors.length}`
+    );
+    setText("counselorPill", `${state.counselors.length} counselors`);
+
+    if (!me) {
+      setText("mePill", "Not logged in");
+      setText("availPill", "—");
+      setText("busyPill", "—");
+
+      const box = el("myAssignmentBox");
+      if (box) {
+        box.className = "empty";
+        box.textContent = "Log in to manage your status.";
+      }
+
+      renderCounselorList(state, null);
+      return;
+    }
+
+    setText("mePill", `Logged in: ${me.name}`);
+
+    const busy = me.active_assignment_id !== null;
+    const avail = me.is_available === true;
+
+    setClass("busyPill", busy ? "pill bad" : "pill good");
+    setText("busyPill", busy ? "BUSY" : "NOT BUSY");
+
+    setClass("availPill", avail ? "pill good" : "pill warn");
+    setText("availPill", avail ? "AVAILABLE" : "UNAVAILABLE");
+
+    const box = el("myAssignmentBox");
+    if (box) {
+      const assignment = state.assignments.find(
+        (a) => a.id === me.active_assignment_id && a.ended_at === null
+      );
+
+      const student = assignment
+        ? state.students.find((s) => s.id === assignment.student_id)
+        : null;
+
+      box.className = "empty";
+
+      if (assignment && student) {
+        box.textContent = `Assigned to: ${student.name} • Level ${assignment.level} • Started ${fmt(assignment.started_at)}`;
+      } else if (avail) {
+        box.textContent = "You are available. Waiting for a student match…";
+      } else {
+        box.textContent = "You are unavailable.";
+      }
+    }
+
+    renderCounselorList(state, me);
+  }
+
+  async function refreshState() {
+    try {
+      await window.SupaStore.loadState();
+    } catch (err) {
+      console.error("Failed to refresh counselor state", err);
+    }
+  }
+
+  el("loginForm")?.addEventListener("submit", async (e) => {
     e.preventDefault();
 
-    const name = el("loginName").value.trim();
+    const name = el("loginName")?.value.trim() ?? "";
     const levels = Array.from(document.querySelectorAll('input[name="cLevels"]:checked'))
       .map((x) => Number(x.value))
-      .filter(Number.isFinite)
+      .filter((n) => Number.isFinite(n))
       .sort((a, b) => a - b);
 
     if (name.length < 2) {
@@ -131,7 +189,7 @@
     try {
       await window.SupaStore.upsertCounselor({ name, levels });
       setSessionName(name);
-      await window.SupaStore.loadState();
+      await refreshState();
       e.target.reset();
     } catch (err) {
       console.error(err);
@@ -139,63 +197,81 @@
     }
   });
 
-  el("btnLogout").addEventListener("click", () => {
+  el("btnLogout")?.addEventListener("click", async () => {
     clearSessionName();
-    window.SupaStore.loadState();
+    await refreshState();
   });
 
-  el("btnAvailable").addEventListener("click", async () => {
+  el("btnAvailable")?.addEventListener("click", async () => {
     const me = findMe(window.SupaStore.getState());
-    if (!me) return;
+    if (!me) {
+      window.SupaStore.toast("bad", "Not logged in", "Log in first.");
+      return;
+    }
 
     try {
       await window.SupaStore.setCounselorAvailability(me.id, true);
       await window.Matching.tryMatchAll();
-      await window.SupaStore.loadState();
+      await refreshState();
     } catch (err) {
       console.error(err);
+      window.SupaStore.toast("bad", "Error", err.message || "Could not set available.");
     }
   });
 
-  el("btnUnavailable").addEventListener("click", async () => {
+  el("btnUnavailable")?.addEventListener("click", async () => {
     const me = findMe(window.SupaStore.getState());
-    if (!me) return;
+    if (!me) {
+      window.SupaStore.toast("bad", "Not logged in", "Log in first.");
+      return;
+    }
 
     try {
       await window.SupaStore.setCounselorAvailability(me.id, false);
-      await window.SupaStore.loadState();
+      await refreshState();
     } catch (err) {
       console.error(err);
+      window.SupaStore.toast("bad", "Error", err.message || "Could not set unavailable.");
     }
   });
 
-  el("btnEndSession").addEventListener("click", async () => {
+  el("btnEndSession")?.addEventListener("click", async () => {
     const me = findMe(window.SupaStore.getState());
-    if (!me || !me.active_assignment_id) return;
+    if (!me || !me.active_assignment_id) {
+      window.SupaStore.toast("warn", "No session", "You are not assigned right now.");
+      return;
+    }
 
     try {
       await window.SupaStore.endAssignment(me.active_assignment_id);
       await window.Matching.tryMatchAll();
-      await window.SupaStore.loadState();
+      await refreshState();
     } catch (err) {
       console.error(err);
+      window.SupaStore.toast("bad", "Error", err.message || "Could not end session.");
     }
   });
 
-  window.SupaStore.onStateChanged(render);
+  el("btnTryMatch")?.addEventListener("click", async () => {
+    try {
+      await window.Matching.tryMatchAll();
+      await refreshState();
+    } catch (err) {
+      console.error(err);
+      window.SupaStore.toast("bad", "Error", err.message || "Could not try match.");
+    }
+  });
+
+  window.SupaStore.onStateChanged((state) => {
+    render(state);
+  });
 
   async function boot() {
-    await window.SupaStore.loadState();
+    await refreshState();
     await window.SupaStore.subscribeRealtime();
 
     setInterval(async () => {
-      try {
-        await window.SupaStore.loadState();
-        await window.Matching.tryMatchAll();
-        await window.SupaStore.loadState();
-      } catch (err) {
-        console.error("Auto-refresh failed", err);
-      }
+      await refreshState();
     }, 4000);
   }
 
