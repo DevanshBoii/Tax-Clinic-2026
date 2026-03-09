@@ -4,7 +4,7 @@
   const SUPABASE_URL = "https://xhnhlvqkzemlzxceawxk.supabase.co";
   const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_5x7o2_eg_wwn9qZcVkcAog_LLxqRzDZ";
 
-  const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+  const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
 
   let state = {
     counselors: [],

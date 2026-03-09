@@ -204,9 +204,21 @@
   window.SupaStore.onStateChanged(render);
 
   async function boot() {
-    await window.SupaStore.reconcileSystem();
+  try {
+    // Try cleanup, but don't let it kill the page if it fails
+    try {
+      await window.SupaStore.reconcileSystem();
+    } catch (err) {
+      console.warn("reconcileSystem failed, continuing startup:", err);
+    }
+
     await window.SupaStore.loadState();
-    await window.SupaStore.subscribeRealtime();
+
+    try {
+      await window.SupaStore.subscribeRealtime();
+    } catch (err) {
+      console.warn("Realtime subscription failed, continuing with polling only:", err);
+    }
 
     setInterval(async () => {
       try {
@@ -215,7 +227,10 @@
         console.error("Auto-refresh failed", err);
       }
     }, 4000);
+  } catch (err) {
+    console.error("Boot failed", err);
   }
+}
 
   boot();
 })();
