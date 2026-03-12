@@ -3,7 +3,7 @@
 
   const el = (id) => document.getElementById(id);
 
-  function fmt(ts) {
+  function formatElapsed(startedAt) {\n    const start = new Date(startedAt);\n    const now = new Date();\n    const diff = Math.floor((now - start) / 1000);\n    \n    const hours = Math.floor(diff / 3600);\n    const minutes = Math.floor((diff % 3600) / 60);\n    const seconds = diff % 60;\n    \n    if (hours > 0) {\n      return `${hours}h ${minutes}m`;\n    } else if (minutes > 0) {\n      return `${minutes}m ${seconds}s`;\n    } else {\n      return `${seconds}s`;\n    }\n  }\n\n  function fmt(ts) {
     const d = new Date(ts);
     return d.toLocaleString(undefined, {
       hour: "2-digit",
@@ -56,11 +56,11 @@
 
         const nm = document.createElement("div");
         nm.className = "name";
-        nm.textContent = `${student?.name ?? "Student"} ↔ ${counselor?.name ?? "Counselor"}`;
+        nm.textContent = `${student?.name ?? "Student"} (${student?.student_number ?? "N/A"}) ↔ ${counselor?.name ?? "Counselor"}`;
 
         const pill = document.createElement("span");
         pill.className = "pill good";
-        pill.textContent = "ACTIVE";
+        pill.textContent = `${formatElapsed(a.started_at)} elapsed`;
 
         title.appendChild(nm);
         title.appendChild(pill);
@@ -96,7 +96,7 @@
 
         const nm = document.createElement("div");
         nm.className = "name";
-        nm.textContent = s.name;
+        nm.textContent = `${s.name} (${s.student_number ?? "N/A"})`;
 
         const pill = document.createElement("span");
         pill.className = "pill warn";
@@ -166,8 +166,14 @@
   el("studentForm").addEventListener("submit", async (e) => {
     e.preventDefault();
 
+    const student_number = el("studentNumber").value.trim();
     const name = el("studentName").value.trim();
     const level = Number(el("studentLevel").value);
+
+    if (student_number.length < 1) {
+      window.SupaStore.toast("bad", "Invalid number", "Student number is required.");
+      return;
+    }
 
     if (name.length < 2) {
       window.SupaStore.toast("bad", "Invalid name", "Student name must be at least 2 characters.");
@@ -180,11 +186,11 @@
     }
 
     try {
-      await window.SupaStore.addStudent({ name, level });
+      await window.SupaStore.addStudent({ name, level, student_number });
       await window.Matching.tryMatchAll();
       await window.SupaStore.loadState();
       e.target.reset();
-      window.SupaStore.toast("good", "Student added", `${name} joined the waiting room.`);
+      window.SupaStore.toast("good", "Student added", `${name} (${student_number}) joined the waiting room.`);
     } catch (err) {
       console.error(err);
       window.SupaStore.toast("bad", "Error", err.message || "Could not add student.");
@@ -227,6 +233,11 @@
         console.error("Auto-refresh failed", err);
       }
     }, 4000);
+
+    // Update timers every second
+    setInterval(() => {
+      render(window.SupaStore.getState());
+    }, 1000);
   } catch (err) {
     console.error("Boot failed", err);
   }

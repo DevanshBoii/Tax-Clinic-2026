@@ -4,6 +4,24 @@
   const el = (id) => document.getElementById(id);
   const SESSION_KEY = "counselor_session_name_supabase_v1";
 
+  function formatElapsed(startedAt) {
+    const start = new Date(startedAt);
+    const now = new Date();
+    const diff = Math.floor((now - start) / 1000);
+    
+    const hours = Math.floor(diff / 3600);
+    const minutes = Math.floor((diff % 3600) / 60);
+    const seconds = diff % 60;
+    
+    if (hours > 0) {
+      return `${hours}h ${minutes}m`;
+    } else if (minutes > 0) {
+      return `${minutes}m ${seconds}s`;
+    } else {
+      return `${seconds}s`;
+    }
+  }
+
   function getSessionName() {
     return localStorage.getItem(SESSION_KEY);
   }
@@ -153,7 +171,7 @@
       box.className = "empty";
 
       if (assignment && student) {
-        box.textContent = `Assigned to: ${student.name} • Level ${assignment.level} • Started ${fmt(assignment.started_at)}`;
+        box.textContent = `Assigned to: ${student.name} (${student.student_number ?? "N/A"}) • Level ${assignment.level} • ${formatElapsed(assignment.started_at)} elapsed`;
       } else if (avail) {
         box.textContent = "You are available. Waiting for a student match…";
       } else {
@@ -296,6 +314,11 @@
         console.error("Auto-refresh failed", err);
       }
     }, 4000);
+
+    // Update timers every second
+    setInterval(() => {
+      render(window.SupaStore.getState());
+    }, 1000);
   } catch (err) {
     console.error("Boot failed", err);
   }

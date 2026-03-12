@@ -110,10 +110,11 @@ let isLoadingState = false;
     }
   }
 
-  async function addStudent({ name, level }) {
+  async function addStudent({ name, level, student_number }) {
     const { error } = await supabase.from("students").insert({
       name,
       level,
+      student_number,
       status: "waiting"
     });
 
@@ -197,6 +198,48 @@ let isLoadingState = false;
     await loadState();
   }
 
+  async function manuallyPairStudentCounselor(studentId, counselorId, level) {
+    // Create an assignment between student and counselor
+    const { error: assignErr } = await supabase.from("assignments").insert({
+      student_id: studentId,
+      counselor_id: counselorId,
+      level: level,
+      started_at: new Date().toISOString(),
+      ended_at: null
+    });
+
+    if (assignErr) throw assignErr;
+
+    // Update student status to assigned
+    const { error: studErr } = await supabase
+      .from("students")
+      .update({ status: "assigned" })
+      .eq("id", studentId);
+
+    if (studErr) throw studErr;
+
+    // Update counselor's active assignment
+    const { data: assignment, error: getErr } = await supabase
+      .from("assignments")
+      .select("id")
+      .eq("student_id", studentId)
+      .eq("counselor_id", counselorId)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .single();
+
+    if (getErr) throw getErr;
+
+    const { error: counselErr } = await supabase
+      .from("counselors")
+      .update({ active_assignment_id: assignment.id })
+      .eq("id", counselorId);
+
+    if (counselErr) throw counselErr;
+
+    await loadState();
+  }
+
   async function cancelStudent(studentId) {
     const { data, error } = await supabase.rpc("cancel_student", {
       p_student_id: studentId
@@ -245,6 +288,7 @@ let isLoadingState = false;
     setCounselorAvailability,
     endAssignment,
     endAssignmentAndReturnToWaiting,
+    manuallyPairStudentCounselor,
     cancelStudent,
     reconcileSystem,
     matchQueue,
