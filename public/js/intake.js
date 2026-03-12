@@ -37,55 +37,59 @@
   }
 
   function renderAvailableCounselors(state) {
-    const list = el("availableCounselorsList");
-    if (!list) return;
+    try {
+      const list = el("availableCounselorsList");
+      if (!list) return;
 
-    list.innerHTML = "";
+      list.innerHTML = "";
 
-    const counselors = state.counselors;
-    if (!counselors.length) {
-      list.appendChild(empty("No counselors logged in yet."));
-      return;
-    }
-
-    counselors.forEach((c) => {
-      const card = document.createElement("div");
-      card.className = "card";
-
-      const meta = document.createElement("div");
-      meta.className = "meta";
-
-      const title = document.createElement("div");
-      title.className = "title";
-
-      const nm = document.createElement("div");
-      nm.className = "name";
-      nm.textContent = c.name;
-
-      const pill = document.createElement("span");
-      if (c.active_assignment_id) {
-        pill.className = "pill bad";
-        pill.textContent = "BUSY";
-      } else if (c.is_available) {
-        pill.className = "pill good";
-        pill.textContent = "AVAILABLE";
-      } else {
-        pill.className = "pill warn";
-        pill.textContent = "UNAVAILABLE";
+      const counselors = state.counselors;
+      if (!counselors.length) {
+        list.appendChild(empty("No counselors logged in yet."));
+        return;
       }
 
-      title.appendChild(nm);
-      title.appendChild(pill);
+      counselors.forEach((c) => {
+        const card = document.createElement("div");
+        card.className = "card";
 
-      const sm = document.createElement("div");
-      sm.className = "small";
-      sm.textContent = `Levels: ${Array.isArray(c.levels) ? c.levels.join(", ") : ""}`;
+        const meta = document.createElement("div");
+        meta.className = "meta";
 
-      meta.appendChild(title);
-      meta.appendChild(sm);
-      card.appendChild(meta);
-      list.appendChild(card);
-    });
+        const title = document.createElement("div");
+        title.className = "title";
+
+        const nm = document.createElement("div");
+        nm.className = "name";
+        nm.textContent = c.name;
+
+        const pill = document.createElement("span");
+        if (c.active_assignment_id) {
+          pill.className = "pill bad";
+          pill.textContent = "BUSY";
+        } else if (c.is_available) {
+          pill.className = "pill good";
+          pill.textContent = "AVAILABLE";
+        } else {
+          pill.className = "pill warn";
+          pill.textContent = "UNAVAILABLE";
+        }
+
+        title.appendChild(nm);
+        title.appendChild(pill);
+
+        const sm = document.createElement("div");
+        sm.className = "small";
+        sm.textContent = `Levels: ${Array.isArray(c.levels) ? c.levels.join(", ") : ""}`;
+
+        meta.appendChild(title);
+        meta.appendChild(sm);
+        card.appendChild(meta);
+        list.appendChild(card);
+      });
+    } catch (err) {
+      console.error("renderAvailableCounselors error:", err);
+    }
   }
 
   function render(state) {
@@ -350,7 +354,13 @@
     }
   });
 
-  window.SupaStore.onStateChanged(render);
+  window.SupaStore.onStateChanged((state) => {
+    try {
+      render(state);
+    } catch (err) {
+      console.error("Render failed:", err);
+    }
+  });
 
   async function boot() {
   try {
