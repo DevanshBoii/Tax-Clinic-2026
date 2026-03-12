@@ -3,7 +3,23 @@
 
   const el = (id) => document.getElementById(id);
 
-  function formatElapsed(startedAt) {\n    const start = new Date(startedAt);\n    const now = new Date();\n    const diff = Math.floor((now - start) / 1000);\n    \n    const hours = Math.floor(diff / 3600);\n    const minutes = Math.floor((diff % 3600) / 60);\n    const seconds = diff % 60;\n    \n    if (hours > 0) {\n      return `${hours}h ${minutes}m`;\n    } else if (minutes > 0) {\n      return `${minutes}m ${seconds}s`;\n    } else {\n      return `${seconds}s`;\n    }\n  }\n\n  function fmt(ts) {
+  function formatElapsed(startedAt) {
+    const start = new Date(startedAt);
+    const now = new Date();
+    const diff = Math.floor((now - start) / 1000);
+    
+    const hours = Math.floor(diff / 3600);
+    const minutes = Math.floor((diff % 3600) / 60);
+    const seconds = diff % 60;
+    
+    if (hours > 0) {
+      return `${hours}h ${minutes}m`;
+    } else if (minutes > 0) {
+      return `${minutes}m ${seconds}s`;
+    } else {
+      return `${seconds}s`;
+    }
+  }\n\n  function fmt(ts) {
     const d = new Date(ts);
     return d.toLocaleString(undefined, {
       hour: "2-digit",
@@ -161,6 +177,48 @@
         counselorList.appendChild(card);
       });
     }
+
+    updateIntakePairingDropdowns(state);
+  }
+
+  function updateIntakePairingDropdowns(state) {
+    const studentSelect = el("intakeSelectStudent");
+    const counselorSelect = el("intakeSelectCounselor");
+    
+    if (!studentSelect || !counselorSelect) return;
+
+    // Store current selections
+    const currentStudent = studentSelect.value;
+    const currentCounselor = counselorSelect.value;
+
+    // Update students dropdown - only waiting students
+    const waitingStudents = state.students.filter((s) => s.status === "waiting");
+    studentSelect.innerHTML = '<option value="" disabled selected>Choose a student</option>';
+    waitingStudents.forEach((s) => {
+      const option = document.createElement("option");
+      option.value = s.id;
+      option.textContent = `${s.name} (${s.student_number ?? "N/A"}) - Level ${s.level}`;
+      studentSelect.appendChild(option);
+    });
+    if (currentStudent) studentSelect.value = currentStudent;
+
+    // Update counselors dropdown - only available counselors
+    const availableCounselors = state.counselors.filter((c) => c.is_available && !c.active_assignment_id);
+    counselorSelect.innerHTML = '<option value="" disabled selected>Choose a counselor</option>';
+    availableCounselors.forEach((c) => {
+      const option = document.createElement("option");
+      option.value = c.id;
+      option.textContent = `${c.name} - Levels: ${Array.isArray(c.levels) ? c.levels.join(", ") : "N/A"}`;
+      counselorSelect.appendChild(option);
+    });
+    if (currentCounselor) counselorSelect.value = currentCounselor;
+
+    // Update pill status
+    const pairingPill = el("intakePairingPill");
+    if (pairingPill) {
+      pairingPill.className = waitingStudents.length > 0 && availableCounselors.length > 0 ? "pill good" : "pill warn";
+      pairingPill.textContent = `${waitingStudents.length} waiting • ${availableCounselors.length} available`;
+    }
   }
 
   el("studentForm").addEventListener("submit", async (e) => {
@@ -204,6 +262,37 @@
     } catch (err) {
       console.error(err);
       window.SupaStore.toast("bad", "Error", err.message || "Could not match students.");
+    }
+  });
+
+  el("intakePairingForm")?.addEventListener("submit", async (e) => {
+    e.preventDefault();
+
+    const studentId = el("intakeSelectStudent")?.value;
+    const counselorId = el("intakeSelectCounselor")?.value;
+
+    if (!studentId || !counselorId) {
+      window.SupaStore.toast("bad", "Invalid selection", "Please select both a student and a counselor.");
+      return;
+    }
+
+    const state = window.SupaStore.getState();
+    const student = state.students.find((s) => s.id === studentId);
+    const counselor = state.counselors.find((c) => c.id === counselorId);
+
+    if (!student || !counselor) {
+      window.SupaStore.toast("bad", "Invalid selection", "Student or counselor not found.");
+      return;
+    }
+
+    try {
+      await window.SupaStore.manuallyPairStudentCounselor(studentId, counselorId, student.level);
+      window.SupaStore.toast("good", "Pairing successful", `${student.name} paired with ${counselor.name}`);
+      e.target.reset();
+      await window.SupaStore.loadState();
+    } catch (err) {
+      console.error(err);
+      window.SupaStore.toast("bad", "Error", err.message || "Could not pair student with counselor.");
     }
   });
 
