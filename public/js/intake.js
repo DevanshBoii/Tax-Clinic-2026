@@ -19,7 +19,7 @@
     } else {
       return `${seconds}s`;
     }
-  }\n\n  function fmt(ts) {
+  }/n/n;  function fmt(ts) {
     const d = new Date(ts);
     return d.toLocaleString(undefined, {
       hour: "2-digit",
@@ -36,6 +36,58 @@
     return d;
   }
 
+  function renderAvailableCounselors(state) {
+    const list = el("availableCounselorsList");
+    if (!list) return;
+
+    list.innerHTML = "";
+
+    const counselors = state.counselors;
+    if (!counselors.length) {
+      list.appendChild(empty("No counselors logged in yet."));
+      return;
+    }
+
+    counselors.forEach((c) => {
+      const card = document.createElement("div");
+      card.className = "card";
+
+      const meta = document.createElement("div");
+      meta.className = "meta";
+
+      const title = document.createElement("div");
+      title.className = "title";
+
+      const nm = document.createElement("div");
+      nm.className = "name";
+      nm.textContent = c.name;
+
+      const pill = document.createElement("span");
+      if (c.active_assignment_id) {
+        pill.className = "pill bad";
+        pill.textContent = "BUSY";
+      } else if (c.is_available) {
+        pill.className = "pill good";
+        pill.textContent = "AVAILABLE";
+      } else {
+        pill.className = "pill warn";
+        pill.textContent = "UNAVAILABLE";
+      }
+
+      title.appendChild(nm);
+      title.appendChild(pill);
+
+      const sm = document.createElement("div");
+      sm.className = "small";
+      sm.textContent = `Levels: ${Array.isArray(c.levels) ? c.levels.join(", ") : ""}`;
+
+      meta.appendChild(title);
+      meta.appendChild(sm);
+      card.appendChild(meta);
+      list.appendChild(card);
+    });
+  }
+
   function render(state) {
     const active = state.assignments.filter((a) => a.ended_at === null);
     const waiting = state.students.filter((s) => s.status === "waiting");
@@ -45,6 +97,8 @@
     el("waitingPill").textContent = `${waiting.length} waiting`;
     el("waitingPill2").textContent = `${waiting.length} waiting`;
     el("counselorPill").textContent = `${state.counselors.length} counselors`;
+
+    renderAvailableCounselors(state);
 
     el("livePill").textContent =
       active.length ? `${active.length} in session` :
