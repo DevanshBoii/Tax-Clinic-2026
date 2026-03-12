@@ -92,13 +92,33 @@
 
       <div class="panel inner">
         <div class="head">
-          <h3>All Counselors (live)</h3>
-          <span class="pill" id="counselorPill">0 counselors</span>
+          <h3>Manual Pairing</h3>
+          <span class="pill" id="pairingPill">—</span>
         </div>
         <div class="body">
-          <div class="list" id="counselorList"></div>
+          <form id="pairingForm" autocomplete="off">
+            <div>
+              <label for="selectStudent">Select waiting student</label>
+              <select id="selectStudent" required>
+                <option value="" disabled selected>Choose a student</option>
+              </select>
+            </div>
+
+            <div>
+              <label for="selectCounselor">Select counselor to pair</label>
+              <select id="selectCounselor" required>
+                <option value="" disabled selected>Choose a counselor</option>
+              </select>
+            </div>
+
+            <div class="actions">
+              <button type="submit">Pair Now</button>
+            </div>
+          </form>
         </div>
       </div>
+
+      <div class="spacer"></div>
     </div>
   </section>
 </main>

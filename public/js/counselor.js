@@ -119,6 +119,46 @@
     });
   }
 
+  function updatePairingDropdowns(state) {
+    const studentSelect = el("selectStudent");
+    const counselorSelect = el("selectCounselor");
+    
+    if (!studentSelect || !counselorSelect) return;
+
+    // Store current selections
+    const currentStudent = studentSelect.value;
+    const currentCounselor = counselorSelect.value;
+
+    // Update students dropdown - only waiting students
+    const waitingStudents = state.students.filter((s) => s.status === "waiting");
+    studentSelect.innerHTML = '<option value="" disabled selected>Choose a student</option>';
+    waitingStudents.forEach((s) => {
+      const option = document.createElement("option");
+      option.value = s.id;
+      option.textContent = `${s.name} (${s.student_number ?? "N/A"}) - Level ${s.level}`;
+      studentSelect.appendChild(option);
+    });
+    if (currentStudent) studentSelect.value = currentStudent;
+
+    // Update counselors dropdown - only available counselors
+    const availableCounselors = state.counselors.filter((c) => c.is_available && !c.active_assignment_id);
+    counselorSelect.innerHTML = '<option value="" disabled selected>Choose a counselor</option>';
+    availableCounselors.forEach((c) => {
+      const option = document.createElement("option");
+      option.value = c.id;
+      option.textContent = `${c.name} - Levels: ${Array.isArray(c.levels) ? c.levels.join(", ") : "N/A"}`;
+      counselorSelect.appendChild(option);
+    });
+    if (currentCounselor) counselorSelect.value = currentCounselor;
+
+    // Update pill status
+    const pairingPill = el("pairingPill");
+    if (pairingPill) {
+      pairingPill.className = waitingStudents.length > 0 && availableCounselors.length > 0 ? "pill good" : "pill warn";
+      pairingPill.textContent = `${waitingStudents.length} waiting • ${availableCounselors.length} available`;
+    }
+  }
+
   function render(state) {
     if (!state) return;
 
@@ -180,6 +220,7 @@
     }
 
     renderCounselorList(state, me);
+    updatePairingDropdowns(state);
   }
 
   async function refreshState() {
@@ -283,6 +324,37 @@
     } catch (err) {
       console.error(err);
       window.SupaStore.toast("bad", "Error", err.message || "Could not try match.");
+    }
+  });
+
+  el("pairingForm")?.addEventListener("submit", async (e) => {
+    e.preventDefault();
+
+    const studentId = el("selectStudent")?.value;
+    const counselorId = el("selectCounselor")?.value;
+
+    if (!studentId || !counselorId) {
+      window.SupaStore.toast("bad", "Invalid selection", "Please select both a student and a counselor.");
+      return;
+    }
+
+    const state = window.SupaStore.getState();
+    const student = state.students.find((s) => s.id === studentId);
+    const counselor = state.counselors.find((c) => c.id === counselorId);
+
+    if (!student || !counselor) {
+      window.SupaStore.toast("bad", "Invalid selection", "Student or counselor not found.");
+      return;
+    }
+
+    try {
+      await window.SupaStore.manuallyPairStudentCounselor(studentId, counselorId, student.level);
+      window.SupaStore.toast("good", "Pairing successful", `${student.name} paired with ${counselor.name}`);
+      e.target.reset();
+      await refreshState();
+    } catch (err) {
+      console.error(err);
+      window.SupaStore.toast("bad", "Error", err.message || "Could not pair student with counselor.");
     }
   });
 
