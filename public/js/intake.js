@@ -19,7 +19,9 @@
     } else {
       return `${seconds}s`;
     }
-  }/n/n;  function fmt(ts) {
+  }
+
+  function fmt(ts) {
     const d = new Date(ts);
     return d.toLocaleString(undefined, {
       hour: "2-digit",
